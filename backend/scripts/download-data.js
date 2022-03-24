@@ -1,10 +1,9 @@
+import cliProgress from 'cli-progress';
 import download from 'download';
 import fs from 'fs';
 import tmpdir from '@stdlib/os-tmpdir';
-import logUpdate from 'log-update';
 import util from 'util';
 import stream from 'stream';
-import CsvReadableStream from 'csv-reader';
 
 const fileName = 'invoices.csv';
 const dataURL = `https://duemint.s3.amazonaws.com/uploads/files/${fileName}`;
@@ -12,30 +11,28 @@ const dataURL = `https://duemint.s3.amazonaws.com/uploads/files/${fileName}`;
 const pipeline = util.promisify(stream.pipeline);
 
 (async () => {
+  console.info('Descargando datos de facturas y guardandolos en MongoDB');
+
+  const downloadBar = new cliProgress.SingleBar({
+    format: '> Progreso de descarga: {bar} | {percentage}%',
+    barCompleteChar: '\u2588',
+    barIncompleteChar: '\u2591',
+    hideCursor: true,
+  });
+  downloadBar.start(100, 0);
+
   const downloadStream = download(dataURL);
   const fsWriterStream = fs.createWriteStream(`${tmpdir()}/${fileName}`);
-  const csvReadableStream = new CsvReadableStream();
 
   downloadStream.on('downloadProgress', ({ percent }) => {
     const percentage = Math.round(percent * 100);
-    logUpdate(`Progreso de descarga: (${percentage}%)`);
+    downloadBar.update(percentage);
   });
 
   pipeline(downloadStream, fsWriterStream)
     .then(() => {
-      console.log(`File downloaded to ${tmpdir()}/${fileName}`);
-      const fsReaderStream = fs.createReadStream(`${tmpdir()}/${fileName}`, {
-        encoding: 'utf8',
-      });
-
-      fsReaderStream
-        .pipe(csvReadableStream)
-        .on('error', (error) => {
-          console.error(error);
-        })
-        .on('header', (headers) => {
-          console.info(headers);
-        });
+      downloadBar.stop();
+      console.log(`> Archivo descargado en: ${tmpdir()}/${fileName}`);
     })
     .catch((error) => console.error(`Something went wrong. ${error.message}`));
 })();
