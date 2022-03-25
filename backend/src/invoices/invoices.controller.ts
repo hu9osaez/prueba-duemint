@@ -23,4 +23,15 @@ export class InvoicesController {
       return new ResponseError(error);
     }
   }
+
+  @Get('misc/metadata')
+  async getStatsMetadata() {
+    try {
+      const metadata = await this.invoicesService.getStatsMetadata();
+
+      return new ResponseSuccess(metadata);
+    } catch (error) {
+      return new ResponseError(error);
+    }
+  }
 }

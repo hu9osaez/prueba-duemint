@@ -25,6 +25,7 @@ export class InvoicesService implements OnModuleInit {
     @InjectQueue('invoices/process-stats') private statsQueue: Queue,
   ) {}
 
+  // Process stats
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async startQueue() {
     const perPage = 500000;
@@ -36,14 +37,21 @@ export class InvoicesService implements OnModuleInit {
     }
   }
 
+  // DB related-methods
   async getOne(year: string) {
     return this.statsModel.findOne({ year }).exec();
   }
 
+  async getStatsMetadata() {
+    return this.statsModel.distinct('year');
+  }
+
+  // NestJS
   async onModuleInit(): Promise<void> {
     console.log(`The module has been initialized.`);
   }
 
+  // Helper
   private pagination(length: number, currentPage: number, itemsPerPage: number): JobData {
     return {
       total: length,
