@@ -4,6 +4,7 @@ import { Connection, Model } from 'mongoose';
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 import { InjectConnection } from '@nestjs/mongoose';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 import { IDataByMonth } from '../interfaces/data-by-month.interface';
 
@@ -24,6 +25,7 @@ export class InvoicesService implements OnModuleInit {
     @InjectQueue('invoices/process-stats') private statsQueue: Queue,
   ) {}
 
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async startQueue() {
     const perPage = 500000;
     const collectionStats = await this.connection.db.collection('invoices').stats();
@@ -40,7 +42,6 @@ export class InvoicesService implements OnModuleInit {
 
   async onModuleInit(): Promise<void> {
     console.log(`The module has been initialized.`);
-    // await this.startQueue();
   }
 
   private pagination(length: number, currentPage: number, itemsPerPage: number): JobData {

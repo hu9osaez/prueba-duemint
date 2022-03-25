@@ -3,12 +3,14 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { BullModule } from '@nestjs/bull';
+import { ScheduleModule } from '@nestjs/schedule';
 
 // Modules
 import { InvoicesModule } from './invoices/invoices.module';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
