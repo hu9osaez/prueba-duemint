@@ -24,6 +24,9 @@ import { InvoicesModule } from './invoices/invoices.module';
           host: config.get<string>('REDIS_HOST'),
           port: config.get<number>('REDIS_PORT'),
           password: config.get<string>('REDIS_PWD'),
+          tls: {
+            servername: config.get<string>('REDIS_HOST'),
+          },
           db: 1,
         },
       }),
@@ -34,7 +37,7 @@ import { InvoicesModule } from './invoices/invoices.module';
       useFactory: (config: ConfigService) => ({
         limiter: {
           max: 1,
-          duration: 10000, // 10 segundos
+          duration: 5000, // 5 segundos
         },
         redis: {
           host: config.get<string>('REDIS_HOST'),

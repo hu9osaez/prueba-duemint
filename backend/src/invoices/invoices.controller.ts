@@ -1,4 +1,4 @@
-import { Controller, Get, Inject } from '@nestjs/common';
+import { Controller, Get, Inject, Query } from '@nestjs/common';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
 
@@ -14,13 +14,11 @@ export class InvoicesController {
   ) {}
 
   @Get('misc/monthly')
-  async groupedByMonth(): Promise<IResponse> {
+  async groupedByMonth(@Query('year') year: string): Promise<IResponse> {
     try {
-      // const invoices = await this.invoicesService.getGroupedByMonth();
-      this.logger.info('PRUEBA', null);
-      // await this.invoicesService.startQueue();
+      const stats = (await this.invoicesService.getOne(year)).toObject();
 
-      return new ResponseSuccess(null);
+      return new ResponseSuccess(stats);
     } catch (error) {
       return new ResponseError(error);
     }

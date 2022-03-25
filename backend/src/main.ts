@@ -21,6 +21,7 @@ async function bootstrap() {
   });
   await app.register(fastifyHelmet);
   app.useGlobalPipes(new ValidationPipe());
+  app.enableShutdownHooks();
 
   await app.listen(configService.get('API_PORT'));
 }

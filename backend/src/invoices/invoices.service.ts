@@ -5,7 +5,6 @@ import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 import { InjectConnection } from '@nestjs/mongoose';
 
-import { IInvoice } from '../interfaces/invoice.interface';
 import { IDataByMonth } from '../interfaces/data-by-month.interface';
 
 export type JobData = {
@@ -21,12 +20,12 @@ export type JobData = {
 export class InvoicesService implements OnModuleInit {
   constructor(
     @InjectConnection() private connection: Connection,
-    @InjectModel('Invoice') private readonly invoiceModel: Model<IInvoice | IDataByMonth>,
+    @InjectModel('StatsPerMonth') private readonly statsModel: Model<IDataByMonth>,
     @InjectQueue('invoices/process-stats') private statsQueue: Queue,
   ) {}
 
   async startQueue() {
-    const perPage = 1000000;
+    const perPage = 500000;
     const collectionStats = await this.connection.db.collection('invoices').stats();
     const pagination = this.pagination(collectionStats.count, 1, perPage);
 
@@ -35,9 +34,13 @@ export class InvoicesService implements OnModuleInit {
     }
   }
 
+  async getOne(year: string) {
+    return this.statsModel.findOne({ year }).exec();
+  }
+
   async onModuleInit(): Promise<void> {
     console.log(`The module has been initialized.`);
-    await this.startQueue();
+    // await this.startQueue();
   }
 
   private pagination(length: number, currentPage: number, itemsPerPage: number): JobData {

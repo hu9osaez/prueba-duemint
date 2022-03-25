@@ -7,10 +7,14 @@ import { InvoicesService } from './invoices.service';
 import { InvoicesProcessor } from './invoices.processor';
 
 import { InvoiceSchema } from '../schemas/invoice.schema';
+import { StatsPerMonthSchema } from '../schemas/stats-per-month.schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: 'Invoice', schema: InvoiceSchema, collection: 'invoices' }]),
+    MongooseModule.forFeature([
+      { name: 'Invoice', schema: InvoiceSchema },
+      { name: 'StatsPerMonth', schema: StatsPerMonthSchema },
+    ]),
     BullModule.registerQueue({
       name: 'invoices/process-stats',
     }),
