@@ -16,6 +16,15 @@ class EnvironmentVariables {
 
   @IsString()
   MONGODB_URI: string;
+
+  @IsString()
+  REDIS_HOST: string;
+
+  @IsNumber()
+  REDIS_PORT: number;
+
+  @IsString()
+  REDIS_PWD: string;
 }
 
 export function checkConfig(config: Record<string, unknown>) {
