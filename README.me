@@ -1,0 +1,42 @@
+# Prueba técnica Duemint
+
+Fuente de datos: [https://duemint.s3.amazonaws.com/uploads/files/invoices.csv](https://duemint.s3.amazonaws.com/uploads/files/invoices.csv)
+
+    # Descargar csv
+    wget https://duemint.s3.amazonaws.com/uploads/files/invoices.csv
+
+	# Importar datos a MongoDB
+	mongoimport --uri "MONGODB_URI" --collection invoices --type csv --file invoices.csv --headerline
+
+
+
+# Instalación Stack
+
+    # Instalar depedencias backend
+    cd backend
+    yarn install
+
+	# Copiar archivo .env de ejemplo y completar
+	cp .env.sample .env
+	# NODE_ENV=development
+	# API_PORT=3000
+	# MONGODB_URI=
+	# REDIS_HOST=
+	# REDIS_PORT=
+	# REDIS_PWD=
+
+    # Una vez instalado y configurado el stack, correr el servicio. API Url http://localhost:4000/
+    npm run start
+
+
+    # Instalar depedencias frontend
+    cd frontend
+    yarn install
+
+    # Una vez instalado el stack, correr el servicio. Url http://localhost:8080/
+    npm run serve
+
+
+
+# Procesos automáticos
+En la API (backend), se encuentra configurado un cron que se ejecuta cada noche a las 00, el cual procesa, calcula y guarda en MongoDB los datos de las facturas agrupadas por año y mes.
