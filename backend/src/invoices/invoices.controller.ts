@@ -27,7 +27,7 @@ export class InvoicesController {
   @Get('misc/metadata')
   async getStatsMetadata() {
     try {
-      const metadata = await this.invoicesService.getStatsMetadata();
+      const metadata = await this.invoicesService.getYearStatsMetadata();
 
       return new ResponseSuccess(metadata);
     } catch (error) {

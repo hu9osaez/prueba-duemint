@@ -19,21 +19,35 @@ export type JobData = {
 
 @Injectable()
 export class InvoicesService implements OnModuleInit {
+  private readonly PER_PAGE: number;
   constructor(
     @InjectConnection() private connection: Connection,
     @InjectModel('StatsPerMonth') private readonly statsModel: Model<IDataByMonth>,
-    @InjectQueue('invoices/process-stats') private statsQueue: Queue,
-  ) {}
+    @InjectQueue('invoices/stats-per-year-month') private statsYearsQueue: Queue,
+    @InjectQueue('invoices/stats-per-person') private statsPersonQueue: Queue,
+  ) {
+    this.PER_PAGE = 500000;
+  }
 
-  // Process stats
+  // Process stats per years & months
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
-  async startQueue() {
-    const perPage = 500000;
+  async startStatsYearsQueue() {
     const collectionStats = await this.connection.db.collection('invoices').stats();
-    const pagination = this.pagination(collectionStats.count, 1, perPage);
+    const pagination = this.pagination(collectionStats.count, 1, this.PER_PAGE);
 
     for (let current = pagination.current_page; current <= pagination.last_page; current++) {
-      await this.statsQueue.add(this.pagination(pagination.total, current, perPage));
+      await this.statsYearsQueue.add(this.pagination(pagination.total, current, this.PER_PAGE));
+    }
+  }
+
+  // Process stats per person, years & months
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async startStatsPersonQueue() {
+    const collectionStats = await this.connection.db.collection('invoices').stats();
+    const pagination = this.pagination(collectionStats.count, 1, this.PER_PAGE);
+
+    for (let current = pagination.current_page; current <= pagination.last_page; current++) {
+      await this.statsPersonQueue.add(this.pagination(pagination.total, current, this.PER_PAGE));
     }
   }
 
@@ -42,13 +56,14 @@ export class InvoicesService implements OnModuleInit {
     return this.statsModel.findOne({ year }).exec();
   }
 
-  async getStatsMetadata() {
+  async getYearStatsMetadata() {
     return this.statsModel.distinct('year');
   }
 
   // NestJS
   async onModuleInit(): Promise<void> {
     console.log(`The module has been initialized.`);
+    await this.startStatsPersonQueue();
   }
 
   // Helper

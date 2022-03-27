@@ -11,22 +11,26 @@ import * as pMap from 'p-map';
 import { JobData } from './invoices.service';
 import { IInvoice } from '../interfaces/invoice.interface';
 import { IDataByMonth } from '../interfaces/data-by-month.interface';
+import { IDataByPerson } from '../interfaces/data-by-person.interface';
 
 @Injectable()
-@Processor('invoices/process-stats')
-export class InvoicesProcessor {
+@Processor('invoices/stats-per-person')
+export class InvoicesPerPersonProcessor {
+  private readonly KEY_STATS: string;
   constructor(
     @InjectConnection() private connection: Connection,
     @InjectModel('Invoice') private readonly invoiceModel: Model<IInvoice | IDataByMonth>,
-    @InjectModel('StatsPerMonth') private readonly statsModel: Model<IDataByMonth>,
+    @InjectModel('StatsPerPerson') private readonly statsModel: Model<IDataByPerson>,
     @InjectRedis() private readonly redis: Redis,
-  ) {}
+  ) {
+    this.KEY_STATS = 'invoices/tmp-stats-per-person';
+  }
 
   @Process()
   async processStats(job: Job, cb: DoneCallback) {
     const data: JobData = job.data;
     const query = this.parseQuery(data.to, data.from);
-    const tmpStats: any = await this.redis.get('invoices/tmp-stats');
+    const tmpStats: any = await this.redis.get(this.KEY_STATS);
     const auxTmpStats = {};
 
     const chunkedData = await this.invoiceModel.aggregate(query).exec();
@@ -35,28 +39,44 @@ export class InvoicesProcessor {
       const parsedStats = JSON.parse(tmpStats);
 
       chunkedData.forEach((item) => {
-        const [year, month] = item._id.toString().split('-');
+        const [year, month] = item.parsedDate.split('-');
 
-        if (has(parsedStats, year)) {
-          const newSalesCount: number =
-            get(parsedStats, `${year}.months.${month}.sales_count`) + item.sales_count;
-          const newTotal: number = get(parsedStats, `${year}.months.${month}.total`) + item.total;
+        if (has(parsedStats, item.person)) {
+          const prevSalesCount: number = get(
+            parsedStats,
+            `${item.person}.years.${year}.months.${month}.salesCount`,
+          );
+          const newSalesCount: number = prevSalesCount + item.salesCount;
 
-          set(auxTmpStats, `${year}.months.${month}.sales_count`, newSalesCount);
-          set(auxTmpStats, `${year}.months.${month}.total`, newTotal);
+          const prevTotal: number = get(
+            parsedStats,
+            `${item.person}.years.${year}.months.${month}.total`,
+          );
+          const newTotal: number = prevTotal + item.total;
+
+          set(
+            auxTmpStats,
+            `${item.person}.years.${year}.months.${month}.salesCount`,
+            newSalesCount,
+          );
+          set(auxTmpStats, `${item.person}.years.${year}.months.${month}.total`, newTotal);
         }
       });
     } else {
       chunkedData.forEach((item) => {
-        const [year, month] = item._id.toString().split('-');
+        const [year, month] = item.parsedDate.split('-');
 
-        set(auxTmpStats, `${year}.months.${month}.sales_count`, item.sales_count);
-        set(auxTmpStats, `${year}.months.${month}.total`, item.total);
+        set(
+          auxTmpStats,
+          `${item.person}.years.${year}.months.${month}.salesCount`,
+          item.salesCount,
+        );
+        set(auxTmpStats, `${item.person}.years.${year}.months.${month}.total`, item.total);
       });
     }
 
     // Save temporary processed data
-    await this.redis.set('invoices/tmp-stats', JSON.stringify(auxTmpStats));
+    await this.redis.set(this.KEY_STATS, JSON.stringify(auxTmpStats));
 
     // If is it the last page, we save data to mongo and remove from cache
     if (data.current_page === data.last_page) {
@@ -64,9 +84,11 @@ export class InvoicesProcessor {
       await this.saveStats(auxTmpStats);
 
       // Remove data from redis
-      await this.redis.del('invoices/tmp-stats');
+      await this.redis.del(this.KEY_STATS);
 
-      console.log('All stats from invoices were saved in MongoDB collection: [stats-per-month]');
+      console.log(
+        'All stats from invoices per person were saved in MongoDB collection: [stats-per-person]',
+      );
     }
 
     cb();
@@ -79,11 +101,11 @@ export class InvoicesProcessor {
   }
 
   private async saveStats(auxTmpStats) {
-    const mapper = async (year) => {
-      const months = get(auxTmpStats, `${year}.months`);
+    const mapper = async (person) => {
+      const years = get(auxTmpStats, `${person}.years`);
       const resultUpdate = await this.statsModel.findOneAndUpdate(
-        { year: year.toString() },
-        { $set: { months } },
+        { person: person.toString() },
+        { $set: { years } },
         { upsert: true },
       );
 
@@ -114,10 +136,22 @@ export class InvoicesProcessor {
       {
         $group: {
           _id: {
-            $concat: [{ $toString: '$year' }, '-', { $toString: '$month' }],
+            person: '$person',
+            parsedDate: {
+              $concat: [{ $toString: '$year' }, '-', { $toString: '$month' }],
+            },
           },
-          sales_count: { $sum: 1 },
+          salesCount: { $sum: 1 },
           total: { $sum: '$value' },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          person: '$_id.person',
+          parsedDate: '$_id.parsedDate',
+          salesCount: 1,
+          total: 1,
         },
       },
     ];
