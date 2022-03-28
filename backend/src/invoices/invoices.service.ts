@@ -7,6 +7,7 @@ import { InjectConnection } from '@nestjs/mongoose';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
 import { IDataByMonth } from '../interfaces/data-by-month.interface';
+import { IDataByPerson } from '../interfaces/data-by-person.interface';
 
 export type JobData = {
   total: number;
@@ -22,7 +23,8 @@ export class InvoicesService implements OnModuleInit {
   private readonly PER_PAGE: number;
   constructor(
     @InjectConnection() private connection: Connection,
-    @InjectModel('StatsPerMonth') private readonly statsModel: Model<IDataByMonth>,
+    @InjectModel('StatsPerMonth') private readonly statsYearModel: Model<IDataByMonth>,
+    @InjectModel('StatsPerPerson') private readonly statsPersonModel: Model<IDataByPerson>,
     @InjectQueue('invoices/stats-per-year-month') private statsYearsQueue: Queue,
     @InjectQueue('invoices/stats-per-person') private statsPersonQueue: Queue,
   ) {
@@ -52,12 +54,17 @@ export class InvoicesService implements OnModuleInit {
   }
 
   // DB related-methods
-  async getOne(year: string) {
-    return this.statsModel.findOne({ year }).exec();
+  async getOneYear(year: string) {
+    return this.statsYearModel.findOne({ year }).exec();
+  }
+
+  async getOnePerson(person: string, year: string) {
+    const projection = { [`years.${year}`]: true };
+    return this.statsPersonModel.findOne({ person }, projection).exec();
   }
 
   async getYearStatsMetadata() {
-    return this.statsModel.distinct('year');
+    return this.statsYearModel.distinct('year');
   }
 
   // NestJS

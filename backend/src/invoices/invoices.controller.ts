@@ -13,10 +13,10 @@ export class InvoicesController {
     @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
   ) {}
 
-  @Get('misc/monthly')
-  async groupedByMonth(@Query('year') year: string): Promise<IResponse> {
+  @Get('stats/monthly')
+  async groupedByYear(@Query('year') year: string): Promise<IResponse> {
     try {
-      const stats = (await this.invoicesService.getOne(year)).toObject();
+      const stats = (await this.invoicesService.getOneYear(year)).toObject();
 
       return new ResponseSuccess(stats);
     } catch (error) {
@@ -24,7 +24,21 @@ export class InvoicesController {
     }
   }
 
-  @Get('misc/metadata')
+  @Get('stats/per-person')
+  async groupedByPerson(
+    @Query('person') person: string,
+    @Query('year') year: string,
+  ): Promise<IResponse> {
+    try {
+      const stats = (await this.invoicesService.getOnePerson(year, person)).toObject();
+
+      return new ResponseSuccess(stats);
+    } catch (error) {
+      return new ResponseError(error);
+    }
+  }
+
+  @Get('stats/metadata/years')
   async getStatsMetadata() {
     try {
       const metadata = await this.invoicesService.getYearStatsMetadata();
