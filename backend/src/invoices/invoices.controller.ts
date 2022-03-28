@@ -1,6 +1,7 @@
 import { Controller, Get, Inject, Query } from '@nestjs/common';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
+import { get as getProperty } from 'dot-prop';
 
 import { InvoicesService } from './invoices.service';
 import { ResponseError, ResponseSuccess } from '../dto/response.dto';
@@ -26,22 +27,34 @@ export class InvoicesController {
 
   @Get('stats/per-person')
   async groupedByPerson(
-    @Query('person') person: string,
     @Query('year') year: string,
+    @Query('person') person: string,
   ): Promise<IResponse> {
     try {
       const stats = (await this.invoicesService.getOnePerson(year, person)).toObject();
+      const months = getProperty(stats, `years.${year}.months`);
 
-      return new ResponseSuccess(stats);
+      return new ResponseSuccess({ person, year, months });
     } catch (error) {
       return new ResponseError(error);
     }
   }
 
   @Get('stats/metadata/years')
-  async getStatsMetadata() {
+  async getStatsYearsMetadata() {
     try {
       const metadata = await this.invoicesService.getYearStatsMetadata();
+
+      return new ResponseSuccess(metadata);
+    } catch (error) {
+      return new ResponseError(error);
+    }
+  }
+
+  @Get('stats/metadata/people')
+  async getStatsPersonsMetadata() {
+    try {
+      const metadata = await this.invoicesService.getPersonStatsMetadata();
 
       return new ResponseSuccess(metadata);
     } catch (error) {

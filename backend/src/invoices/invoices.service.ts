@@ -58,9 +58,13 @@ export class InvoicesService implements OnModuleInit {
     return this.statsYearModel.findOne({ year }).exec();
   }
 
-  async getOnePerson(person: string, year: string) {
+  async getOnePerson(year: string, person: string) {
     const projection = { [`years.${year}`]: true };
     return this.statsPersonModel.findOne({ person }, projection).exec();
+  }
+
+  async getPersonStatsMetadata() {
+    return this.statsPersonModel.distinct('person');
   }
 
   async getYearStatsMetadata() {
