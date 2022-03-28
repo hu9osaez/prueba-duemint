@@ -70,7 +70,6 @@ export class InvoicesService implements OnModuleInit {
   // NestJS
   async onModuleInit(): Promise<void> {
     console.log(`The module has been initialized.`);
-    await this.startStatsPersonQueue();
   }
 
   // Helper
